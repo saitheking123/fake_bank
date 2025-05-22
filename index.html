@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake Bank Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 90%;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 1.5rem;
+        }
+        .section {
+            display: none;
+            margin-top: 20px;
+        }
+        .section.active {
+            display: block;
+        }
+        input, button {
+            padding: 12px;
+            margin: 8px 0;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .error {
+            color: red;
+            font-size: 0.9rem;
+        }
+        .success {
+            color: green;
+            font-size: 0.9rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+                font-size: 14px;
+            }
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.2rem;
+            }
+            input, button {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            table {
+                font-size: 0.8rem;
+            }
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fake Bank Game</h1>
+
+        <!-- Login Section -->
+        <div id="login" class="section active">
+            <h2>Login</h2>
+            <input type="text" id="loginUsername" placeholder="Username">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button onclick="login()">Login</button>
+            <p>Not registered? <a href="#" onclick="showSection('signup')">Sign Up</a></p>
+            <p>Admin? <a href="#" onclick="showSection('adminLogin')">Admin Login</a></p>
+            <p id="loginError" class="error"></p>
+        </div>
+
+        <!-- Signup Section -->
+        <div id="signup" class="section">
+            <h2>Sign Up</h2>
+            <input type="text" id="signupUsername" placeholder="Username">
+            <input type="password" id="signupPassword" placeholder="Password">
+            <button onclick="signup()">Sign Up</button>
+            <p>Already registered? <a href="#" onclick="showSection('login')">Login</a></p>
+            <p id="signupError" class="error"></p>
+            <p id="signupSuccess" class="success"></p>
+        </div>
+
+        <!-- Admin Login Section -->
+        <div id="adminLogin" class="section">
+            <h2>Admin Login</h2>
+            <input type="password" id="adminPassword" placeholder="Admin Password">
+            <button onclick="adminLogin()">Login</button>
+            <p>Back to <a href="#" onclick="showSection('login')">User Login</a></p>
+            <p id="adminLoginError" class="error"></p>
+        </div>
+
+        <!-- User Dashboard Section -->
+        <div id="dashboard" class="section">
+            <h2>Welcome, <span id="currentUser"></span></h2>
+            <p>Balance: <span id="balance">100</span> INR</p>
+            <button onclick="showSection('transfer')">Transfer Money</button>
+            <button onclick="showSection('history')">View Transaction History</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Transfer Section -->
+        <div id="transfer" class="section">
+            <h2>Transfer Money</h2>
+            <input type="text" id="recipient" placeholder="Recipient Username">
+            <input type="number" id="amount" placeholder="Amount (INR)">
+            <button onclick="transfer()">Transfer</button>
+            <button onclick="showSection('dashboard')">Back</button>
+            <p id="transferError" class="error"></p>
+            <p id="transferSuccess" class="success"></p>
+        </div>
+
+        <!-- Transaction History Section -->
+        <div id="history" class="section">
+            <h2>Transaction History</h2>
+            <table id="transactionTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>From/To</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionBody"></tbody>
+            </table>
+            <button onclick="showSection('dashboard')">Back</button>
+        </div>
+
+        <!-- Admin Dashboard Section -->
+        <div id="adminDashboard" class="section">
+            <h2>Admin Dashboard</h2>
+            <h3>Deposit Money</h3>
+            <input type="text" id="depositUsername" placeholder="Username">
+            <input type="number" id="depositAmount" placeholder="Amount (INR)">
+            <button onclick="adminDeposit()">Deposit</button>
+            <button onclick="logout()">Logout</button>
+            <p id="depositError" class="error"></p>
+            <p id="depositSuccess" class="success"></p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize localStorage if not present
+        if (!localStorage.getItem('users')) {
+            localStorage.setItem('users', JSON.stringify({}));
+        }
+        if (!localStorage.getItem('transactions')) {
+            localStorage.setItem('transactions', JSON.stringify({}));
+        }
+
+        let currentUser = null;
+        let isAdmin = false;
+        const ADMIN_PASSWORD = 'sai123';
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        function signup() {
+            const username = document.getElementById('signupUsername').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const error = document.getElementById('signupError');
+            const success = document.getElementById('signupSuccess');
+
+            if (!username || !password) {
+                error.textContent = 'Username and password are required.';
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users'));
+            if (users[username]) {
+                error.textContent = 'Username already exists.';
+                return;
+            }
+
+            users[username] = {
+                password: password,
+                balance: 100,
+                transactions: []
+            };
+            localStorage.setItem('users', JSON.stringify(users));
+            success.textContent = 'Account created! Please login.';
+            error.textContent = '';
+            document.getElementById('signupUsername').value = '';
+            document.getElementById('signupPassword').value = '';
+            setTimeout(() => showSection('login'), 2000);
+        }
+
+        function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const error = document.getElementById('loginError');
+
+            const users = JSON.parse(localStorage.getItem('users'));
+            if (!users[username] || users[username].password !== password) {
+                error.textContent = 'Invalid username or password.';
+                return;
+            }
+
+            currentUser = username;
+            isAdmin = false;
+            document.getElementById('currentUser').textContent = username;
+            document.getElementById('balance').textContent = users[username].balance;
+            error.textContent = '';
+            showSection('dashboard');
+            updateTransactionHistory();
+        }
+
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            const error = document.getElementById('adminLoginError');
+
+            if (password !== ADMIN_PASSWORD) {
+                error.textContent = 'Invalid admin password.';
+                return;
+            }
+
+            isAdmin = true;
+            currentUser = 'admin';
+            error.textContent = '';
+            document.getElementById('adminPassword').value = '';
+            showSection('adminDashboard');
+        }
+
+        function logout() {
+            currentUser = null;
+            isAdmin = false;
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            showSection('login');
+        }
+
+        function transfer() {
+            const recipient = document.getElementById('recipient').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const error = document.getElementById('transferError');
+            const success = document.getElementById('transferSuccess');
+
+            if (!recipient || !amount || amount <= 0) {
+                error.textContent = 'Please enter a valid recipient and amount.';
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users'));
+            if (!users[recipient]) {
+                error.textContent = 'Recipient does not exist.';
+                return;
+            }
+            if (recipient === currentUser) {
+                error.textContent = 'Cannot transfer to yourself.';
+                return;
+            }
+            if (users[currentUser].balance < amount) {
+                error.textContent = 'Insufficient balance.';
+                return;
+            }
+
+            users[currentUser].balance -= amount;
+            users[recipient].balance += amount;
+
+            const transaction = {
+                date: new Date().toLocaleString(),
+                type: 'Sent',
+                amount: amount,
+                to: recipient
+            };
+            const recipientTransaction = {
+                date: new Date().toLocaleString(),
+                type: 'Received',
+                amount: amount,
+                from: currentUser
+            };
+
+            users[currentUser].transactions.push(transaction);
+            users[recipient].transactions.push(recipientTransaction);
+            localStorage.setItem('users', JSON.stringify(users));
+
+            document.getElementById('balance').textContent = users[currentUser].balance;
+            success.textContent = `Successfully transferred ${amount} INR to ${recipient}.`;
+            error.textContent = '';
+            document.getElementById('recipient').value = '';
+            document.getElementById('amount').value = '';
+            updateTransactionHistory();
+        }
+
+        function adminDeposit() {
+            const username = document.getElementById('depositUsername').value.trim();
+            const amount = parseFloat(document.getElementById('depositAmount').value);
+            const error = document.getElementById('depositError');
+            const success = document.getElementById('depositSuccess');
+
+            if (!username || !amount || amount <= 0) {
+                error.textContent = 'Please enter a valid username and amount.';
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users'));
+            if (!users[username]) {
+                error.textContent = 'User does not exist.';
+                return;
+            }
+
+            users[username].balance += amount;
+            const transaction = {
+                date: new Date().toLocaleString(),
+                type: 'Received (Admin Deposit)',
+                amount: amount,
+                from: 'Admin'
+            };
+            users[username].transactions.push(transaction);
+            localStorage.setItem('users', JSON.stringify(users));
+
+            success.textContent = `Successfully deposited ${amount} INR to ${username}.`;
+            error.textContent = '';
+            document.getElementById('depositUsername').value = '';
+            document.getElementById('depositAmount').value = '';
+        }
+
+        function updateTransactionHistory() {
+            const users = JSON.parse(localStorage.getItem('users'));
+            const transactionBody = document.getElementById('transactionBody');
+            transactionBody.innerHTML = '';
+
+            if (users[currentUser] && users[currentUser].transactions) {
+                users[currentUser].transactions.forEach(tx => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${tx.date}</td>
+                        <td>${tx.type}</td>
+                        <td>${tx.amount} INR</td>
+                        <td>${tx.to || tx.from || 'N/A'}</td>
+                    `;
+                    transactionBody.appendChild(row);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
